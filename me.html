@@ -194,10 +194,9 @@
       if(nm && data && data.name){ nm.innerHTML = esc(data.name)+'<span class="wave">\u{1F44B}</span>'; }
       if(!data || !data.ok){ box.innerHTML = '<div class="st-empty">読み込みに失敗しました。</div>'; return; }
       if(!data.rows || !data.rows.length){ box.innerHTML = '<div class="st-empty">申請はまだありません。</div>'; return; }
-      var html = '';
-      data.rows.forEach(function(r){
-        var badge, cls, canCancel = false;
-        if(String(r.cancel).indexOf('取り消し') > -1){ badge='取り消し申請中'; cls='b-cancelreq'; }
+      var badge, cls, canCancel = false;
+        if(r.status==='取り消し済み'){ badge='取り消し済み'; cls='b-rej'; }
+        else if(String(r.cancel).indexOf('取り消し') > -1){ badge='取り消し申請中'; cls='b-cancelreq'; }
         else if(r.status==='承認済み'){ badge='承認済み'; cls='b-ok'; }
         else if(r.status==='却下'){ badge='却下'; cls='b-rej'; }
         else { badge='承認待ち'; cls='b-wait'; canCancel = true; }  // 承認待ちのみ取り消し可
