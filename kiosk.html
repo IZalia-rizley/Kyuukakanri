@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>出退勤キオスク</title>
 <style>
   :root {
@@ -24,6 +24,8 @@
     overflow: hidden;
     cursor: default;
     user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation; /* タッチパネル: ダブルタップズーム無効 */
   }
   #scanInput {
     position: absolute;
@@ -64,8 +66,9 @@
     border-radius: 20px;
     color: #fff;
     cursor: pointer;
+    touch-action: manipulation; /* タッチ連打でのズーム暴発防止 */
   }
-  .btn:active { transform: scale(.97); }
+  .btn:active { transform: scale(.97); } /* タッチでも押下フィードバック */
   .btn-checkin { background: linear-gradient(135deg, #43a047, #66bb6a); }
   .btn-otstart { background: linear-gradient(135deg, #ef6c00, #ffa726); }
   .btn-otend   { background: linear-gradient(135deg, #1565c0, #4fc3f7); }
@@ -98,7 +101,8 @@
 <body>
 
 <div id="errBanner"></div>
-<input type="text" id="scanInput" autocomplete="off">
+<!-- inputmode="none": タッチパネル機でフォーカス時にスクリーンキーボードを出さない -->
+<input type="text" id="scanInput" autocomplete="off" inputmode="none">
 
 <!-- 待機 -->
 <div class="screen active" id="screenIdle">
@@ -125,9 +129,7 @@
 </div>
 
 <script>
-// ▼▼ デプロイ後にここだけ差し替え ▼▼
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwL1PWInyF3wWMNvnLgAqz02MPTt7mPa-G-iqe3vE4Sa7w36kyAPNm8N8Wu2XRHAQN_wQ/exec';
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 const STATE_LABEL = {
   '未出勤': 'まだ出勤していません',
@@ -198,10 +200,12 @@ tickClock();
 
 // ---------- スキャナ入力 ----------
 const scanInput = document.getElementById('scanInput');
-function focusScanner() { scanInput.value = ''; scanInput.focus(); }
+function focusScanner() { scanInput.value = ''; scanInput.focus({ preventScroll: true }); }
+// クリックでもタッチでもフォーカスをスキャナ用inputへ戻す
 document.addEventListener('click', focusScanner);
+document.addEventListener('touchend', focusScanner);
 setInterval(() => {
-  if (document.activeElement !== scanInput) scanInput.focus();
+  if (document.activeElement !== scanInput) scanInput.focus({ preventScroll: true });
 }, 2000);
 
 scanInput.addEventListener('keydown', (e) => {
@@ -210,9 +214,9 @@ scanInput.addEventListener('keydown', (e) => {
   const raw = scanInput.value.trim();
   scanInput.value = '';
   if (!raw || busy) return;
-  // QRの中身がURL(me.html直行)でもtoken単体でも受ける
+  // QRの中身がURL(me.html直行)でもtoken単体でも受ける（iフラグ: CapsLock保険）
   let token = raw;
-  const m = raw.match(/[?&]token=([^&#]+)/);
+  const m = raw.match(/[?&]token=([^&#]+)/i);
   if (m) token = decodeURIComponent(m[1]);
   onScan(token);
 });
