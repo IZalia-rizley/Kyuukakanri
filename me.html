@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="休暇申請">
@@ -11,10 +11,10 @@
   <title>マイページ</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    :root{ color-scheme: light;
+    :root{ color-scheme: dark;
       --sky:#00C9FF; --mint:#92FE9D;
-      --ink:#0A2540; --ink-sub:#5b6b7c; --line:#e6ecf1;
-      --card:#ffffff; --accent:#E00000;
+      --ink:#ffffff; --ink-sub:rgba(255,255,255,0.72); --line:rgba(255,255,255,0.12);
+      --card:rgba(0,0,0,0.42); --accent:#E00000;
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{margin:0}
@@ -43,6 +43,7 @@
 
     /* アコーディオン：白カードが浮く */
     .acc{background:var(--card);border-radius:16px;margin:10px 0;overflow:hidden;
+      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
       box-shadow:0 6px 18px rgba(0,80,110,.14)}
     .acc-head{display:flex;align-items:center;gap:12px;padding:16px 18px;cursor:pointer;user-select:none}
     .acc-head .ic{font-size:20px;width:24px;text-align:center;flex:0 0 auto}
@@ -61,7 +62,7 @@
     .big:active{opacity:.92;transform:scale(.99)}
 
     /* 申請状況 */
-    .st-card{background:#f4f9fc;border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:10px}
+    .st-card{background:rgba(255,255,255,0.08);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:10px}
     .st-card:first-child{margin-top:0}
     .st-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
     .st-kind{font-size:16px;font-weight:700;color:var(--ink)}
