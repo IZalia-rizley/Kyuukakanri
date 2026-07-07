@@ -80,11 +80,10 @@
       border:1px solid rgba(255,120,120,0.5);border-radius:10px;cursor:pointer}
     .st-cancel:active{opacity:.8}
     .st-cancel:disabled{opacity:.45}
-    .st-empty,.st-load{font-size:14px;color:var(--ink-sub);padding:6px 0}
-
     .re{background:none;border:none;color:var(--ink-sub);font-size:20px;
       padding:4px 8px;cursor:pointer;font-family:inherit;line-height:1}
     .re:active{opacity:.6}
+    .st-empty,.st-load{font-size:14px;color:var(--ink-sub);padding:6px 0}
 
     /* マイQR */
     .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:2px}
@@ -161,6 +160,10 @@
               '<button class="re" onclick="event.stopPropagation(); loadStatus();">\u21BB</button>' +
               '<span class="ar">\u203A</span>' +
             '</div>' +
+            '<div class="acc-body"><div class="acc-inner" id="st-inner">' +
+              '<div class="st-load">読み込み中…</div>' +
+            '</div></div>' +
+          '</div>' +
 
           '<p class="eyebrow">ID Pass</p>' +
           '<div class="acc">' +
@@ -196,7 +199,9 @@
       if(nm && data && data.name){ nm.innerHTML = esc(data.name)+'<span class="wave">\u{1F44B}</span>'; }
       if(!data || !data.ok){ box.innerHTML = '<div class="st-empty">読み込みに失敗しました。</div>'; return; }
       if(!data.rows || !data.rows.length){ box.innerHTML = '<div class="st-empty">申請はまだありません。</div>'; return; }
-      var badge, cls, canCancel = false;
+      var html = '';
+      data.rows.forEach(function(r){
+        var badge, cls, canCancel = false;
         if(r.status==='取り消し済み'){ badge='取り消し済み'; cls='b-rej'; }
         else if(String(r.cancel).indexOf('取り消し') > -1){ badge='取り消し申請中'; cls='b-cancelreq'; }
         else if(r.status==='承認済み'){ badge='承認済み'; cls='b-ok'; }
@@ -214,9 +219,9 @@
               '<button class="st-cancel" onclick="requestCancel('+parseInt(r.row,10)+', this)">この申請を取り消す</button>'
               : '') +
           '</div>';
-      };
+      });
       box.innerHTML = html;
-    
+    }
 
     // 取り消し申請：確認 → JSONPでL列にフラグ → 一覧再読込
     var _cancelBusy = false;
