@@ -74,6 +74,12 @@
     .b-cancelreq{background:#FFE4C4;color:#9a5300}
     .st-line{font-size:13px;color:var(--ink-sub);line-height:1.5}
     .st-line b{color:var(--ink);font-weight:600}
+    .st-cancel{display:block;width:100%;margin-top:10px;padding:10px;
+      font-size:14px;font-weight:700;font-family:inherit;
+      background:rgba(255,255,255,0.12);color:#ffd9d9;
+      border:1px solid rgba(255,120,120,0.5);border-radius:10px;cursor:pointer}
+    .st-cancel:active{opacity:.8}
+    .st-cancel:disabled{opacity:.45}
     .st-empty,.st-load{font-size:14px;color:var(--ink-sub);padding:6px 0}
 
     /* マイQR */
@@ -190,11 +196,11 @@
       if(!data.rows || !data.rows.length){ box.innerHTML = '<div class="st-empty">申請はまだありません。</div>'; return; }
       var html = '';
       data.rows.forEach(function(r){
-        var badge, cls;
+        var badge, cls, canCancel = false;
         if(String(r.cancel).indexOf('取り消し') > -1){ badge='取り消し申請中'; cls='b-cancelreq'; }
         else if(r.status==='承認済み'){ badge='承認済み'; cls='b-ok'; }
         else if(r.status==='却下'){ badge='却下'; cls='b-rej'; }
-        else { badge='承認待ち'; cls='b-wait'; }
+        else { badge='承認待ち'; cls='b-wait'; canCancel = true; }  // 承認待ちのみ取り消し可
         html +=
           '<div class="st-card">' +
             '<div class="st-top"><span class="st-kind">'+esc(r.type)+'</span>' +
@@ -203,16 +209,47 @@
             '<div class="st-line">'+esc(r.start)+' 〜 '+esc(r.end)+'</div>' +
             '<div class="st-line">申請 '+esc(r.applied)+
               (r.decided ? '　承認 '+esc(r.decided) : '') + '</div>' +
+            (canCancel ?
+              '<button class="st-cancel" onclick="requestCancel('+parseInt(r.row,10)+', this)">この申請を取り消す</button>'
+              : '') +
           '</div>';
       });
       box.innerHTML = html;
     }
 
+    // 取り消し申請：確認 → JSONPでL列にフラグ → 一覧再読込
+    var _cancelBusy = false;
+    function requestCancel(row, btn){
+      if(_cancelBusy) return;
+      if(!confirm('この申請を取り消しますか？\n（園長の確認後に確定します）')) return;
+      _cancelBusy = true;
+      if(btn){ btn.disabled = true; btn.textContent = '送信中…'; }
+      var s = document.createElement('script');
+      s.src = GAS + '?mode=cancel&token=' + encodeURIComponent(token) +
+              '&row=' + encodeURIComponent(row) + '&callback=cancelCallback';
+      s.onerror = function(){
+        _cancelBusy = false;
+        alert('通信に失敗しました。もう一度お試しください。');
+        loadStatus();
+      };
+      document.body.appendChild(s);
+    }
+
+    function cancelCallback(res){
+      _cancelBusy = false;
+      if(!res || !res.ok){
+        alert(res && res.error ? res.error : '取り消し申請に失敗しました。');
+      }
+      loadStatus();   // 成否どちらでも最新状態を再取得（バッジ切替）
+    }
+
     function loadStatus(){
+      var box = document.getElementById('st-inner');
+      if(box) box.innerHTML = '<div class="st-load">読み込み中…</div>';
       var s = document.createElement('script');
       s.src = GAS + '?mode=mystatus&token=' + encodeURIComponent(token) + '&callback=statusCallback';
       s.onerror = function(){
-        var box = document.getElementById('st-inner');
+        if(!box) box = document.getElementById('st-inner');
         if(box) box.innerHTML = '<div class="st-empty">通信に失敗しました。</div>';
       };
       document.body.appendChild(s);
