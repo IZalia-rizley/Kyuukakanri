@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSONP疎通テスト</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;
+      background:#111;color:#eee;margin:0;padding:24px;line-height:1.6}
+    h1{font-size:20px}
+    button{padding:14px 24px;font-size:16px;font-weight:600;border:none;border-radius:10px;
+      background:#E00000;color:#fff;cursor:pointer;margin:8px 0}
+    pre{background:#000;padding:16px;border-radius:10px;white-space:pre-wrap;word-break:break-all;
+      font-size:13px;border:1px solid #333;max-height:60vh;overflow:auto}
+    .ok{color:#34C759}.ng{color:#FF453A}
+    .row{margin:16px 0}
+    label{font-size:13px;color:#999;display:block;margin-bottom:4px}
+    input{width:100%;padding:10px;font-size:14px;border-radius:8px;border:1px solid #444;
+      background:#000;color:#eee;box-sizing:border-box}
+  </style>
+</head>
+<body>
+  <h1>JSONP疎通テスト</h1>
+
+  <div class="row">
+    <label>申請側 /exec URL（?以降は付けない）</label>
+    <input id="gas" value="https://script.google.com/macros/s/AKfycbybMXUn5nsqUxitEClIAlYeA8gyhqSK80fVUMZW-T9nTf9enF1SaJ9Omw7LB0iOwls3/exec">
+  </div>
+  <div class="row">
+    <label>token</label>
+    <input id="tok" value="ippei">
+  </div>
+
+  <button onclick="test()">JSONPで取ってみる</button>
+
+  <div class="row">
+    <div id="verdict"></div>
+    <pre id="out">ここに結果が出ます</pre>
+  </div>
+
+  <script>
+    var _timer = null;
+
+    // JSONPのコールバック。GASが this を呼ぶ形で返してくる。
+    function gotStatus(data){
+      if(_timer){ clearTimeout(_timer); _timer = null; }
+      var out = document.getElementById('out');
+      var verdict = document.getElementById('verdict');
+      try{
+        verdict.innerHTML = '<b class="ok">✓ JSONP成功・データ取得OK</b>';
+        out.textContent = JSON.stringify(data, null, 2);
+      }catch(e){
+        verdict.innerHTML = '<b class="ng">△ 受信したが処理でエラー</b>';
+        out.textContent = String(e);
+      }
+      cleanup();
+    }
+
+    function cleanup(){
+      var s = document.getElementById('jsonp-script');
+      if(s && s.parentNode){ s.parentNode.removeChild(s); }
+    }
+
+    function test(){
+      cleanup();
+      var gas = document.getElementById('gas').value.trim();
+      var tok = document.getElementById('tok').value.trim();
+      var url = gas + '?mode=mystatus&token=' + encodeURIComponent(tok) + '&callback=gotStatus';
+      document.getElementById('verdict').textContent = '';
+      document.getElementById('out').textContent = 'JSONP読み込み中… → ' + url;
+
+      var s = document.createElement('script');
+      s.id = 'jsonp-script';
+      s.src = url;
+      s.onerror = function(){
+        document.getElementById('verdict').innerHTML =
+          '<b class="ng">✗ script読み込み失敗</b>';
+        document.getElementById('out').textContent =
+          'scriptタグのロードに失敗。URLかデプロイを確認。';
+        cleanup();
+      };
+      document.body.appendChild(s);
+
+      // 10秒待っても gotStatus が呼ばれなければタイムアウト
+      _timer = setTimeout(function(){
+        document.getElementById('verdict').innerHTML =
+          '<b class="ng">✗ タイムアウト（10秒）</b>';
+        document.getElementById('out').textContent =
+          'GASがcallback形式で返してない可能性。doGetのJSONP対応とデプロイを確認。';
+        cleanup();
+      }, 10000);
+    }
+  </script>
+</body>
+</html>
