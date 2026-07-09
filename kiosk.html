@@ -25,7 +25,7 @@
     cursor: default;
     user-select: none;
     -webkit-user-select: none;
-    touch-action: manipulation; /* タッチパネル: ダブルタップズーム無効 */
+    touch-action: manipulation;
   }
   #scanInput {
     position: absolute;
@@ -36,7 +36,6 @@
   .screen { display: none; text-align: center; width: 100%; max-width: 720px; padding: 24px; }
   .screen.active { display: block; }
 
-  /* 待機画面 */
   #clock { font-size: 88px; font-weight: 200; letter-spacing: 2px; }
   #dateLine { font-size: 26px; color: var(--sub); margin-top: 4px; }
   #idleMsg {
@@ -51,7 +50,6 @@
   .pulse { animation: pulse 2.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 
-  /* スタッフ画面 */
   #staffName { font-size: 52px; font-weight: 700; }
   #staffState { font-size: 24px; color: var(--sub); margin-top: 10px; }
   #staffDetail { font-size: 18px; color: var(--sub); margin-top: 6px; min-height: 24px; }
@@ -66,12 +64,14 @@
     border-radius: 20px;
     color: #fff;
     cursor: pointer;
-    touch-action: manipulation; /* タッチ連打でのズーム暴発防止 */
+    touch-action: manipulation;
   }
-  .btn:active { transform: scale(.97); } /* タッチでも押下フィードバック */
-  .btn-checkin { background: linear-gradient(135deg, #43a047, #66bb6a); }
-  .btn-otstart { background: linear-gradient(135deg, #ef6c00, #ffa726); }
-  .btn-otend   { background: linear-gradient(135deg, #1565c0, #4fc3f7); }
+  .btn:active { transform: scale(.97); }
+  .btn-checkin  { background: linear-gradient(135deg, #43a047, #66bb6a); }
+  .btn-checkout { background: linear-gradient(135deg, #5e35b1, #7e57c2); }
+  .btn-otstart  { background: linear-gradient(135deg, #ef6c00, #ffa726); }
+  .btn-otend    { background: linear-gradient(135deg, #1565c0, #4fc3f7); }
+  .btn-sub { padding: 18px; font-size: 22px; margin-top: 16px; opacity: .92; }
   .btn-back {
     background: var(--card);
     color: var(--sub);
@@ -81,7 +81,6 @@
   }
   #doneMsg { font-size: 26px; margin-top: 36px; color: var(--sub); }
 
-  /* 結果画面 */
   #resultIcon { font-size: 96px; }
   #resultText { font-size: 36px; font-weight: 700; margin-top: 20px; }
   #resultSub { font-size: 22px; color: var(--sub); margin-top: 10px; }
@@ -101,17 +100,14 @@
 <body>
 
 <div id="errBanner"></div>
-<!-- inputmode="none": タッチパネル機でフォーカス時にスクリーンキーボードを出さない -->
 <input type="text" id="scanInput" autocomplete="off" inputmode="none">
 
-<!-- 待機 -->
 <div class="screen active" id="screenIdle">
   <div id="clock">--:--</div>
   <div id="dateLine"></div>
   <div id="idleMsg" class="pulse">QRコードをスキャンしてください</div>
 </div>
 
-<!-- スタッフ操作 -->
 <div class="screen" id="screenStaff">
   <div id="staffName"></div>
   <div id="staffState"></div>
@@ -121,7 +117,6 @@
   <button class="btn btn-back" onclick="goIdle()">← 戻る</button>
 </div>
 
-<!-- 結果 -->
 <div class="screen" id="screenResult">
   <div id="resultIcon">✅</div>
   <div id="resultText"></div>
@@ -141,7 +136,6 @@ const STATE_LABEL = {
 let resetTimer = null;
 let busy = false;
 
-// ---------- JSONP ----------
 function jsonp(params) {
   return new Promise((resolve, reject) => {
     const cb = '_cb' + Date.now() + Math.floor(Math.random() * 10000);
@@ -161,7 +155,6 @@ function jsonp(params) {
   });
 }
 
-// ---------- 画面制御 ----------
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -186,7 +179,6 @@ function showError(msg) {
   setTimeout(() => { b.style.display = 'none'; }, 4000);
 }
 
-// ---------- 時計 ----------
 function tickClock() {
   const n = new Date();
   document.getElementById('clock').textContent =
@@ -198,10 +190,8 @@ function tickClock() {
 setInterval(tickClock, 1000);
 tickClock();
 
-// ---------- スキャナ入力 ----------
 const scanInput = document.getElementById('scanInput');
 function focusScanner() { scanInput.value = ''; scanInput.focus({ preventScroll: true }); }
-// クリックでもタッチでもフォーカスをスキャナ用inputへ戻す
 document.addEventListener('click', focusScanner);
 document.addEventListener('touchend', focusScanner);
 setInterval(() => {
@@ -214,14 +204,12 @@ scanInput.addEventListener('keydown', (e) => {
   const raw = scanInput.value.trim();
   scanInput.value = '';
   if (!raw || busy) return;
-  // QRの中身がURL(me.html直行)でもtoken単体でも受ける（iフラグ: CapsLock保険）
   let token = raw;
   const m = raw.match(/[?&]token=([^&#]+)/i);
   if (m) token = decodeURIComponent(m[1]);
   onScan(token);
 });
 
-// ---------- メインフロー ----------
 async function onScan(token) {
   busy = true;
   try {
@@ -243,6 +231,7 @@ function renderStaff(st, token) {
   const detail = [];
   if (st.checkin) detail.push('出勤 ' + st.checkin + (st.via ? '（' + st.via + '）' : ''));
   if (st.otStart) detail.push('時間外 ' + st.otStart + '〜' + (st.otEnd || ''));
+  if (st.checkout) detail.push('退勤 ' + st.checkout);
   document.getElementById('staffDetail').textContent = detail.join(' ／ ');
 
   const area = document.getElementById('btnArea');
@@ -250,19 +239,27 @@ function renderStaff(st, token) {
   const done = document.getElementById('doneMsg');
   done.style.display = 'none';
 
-  const mk = (label, cls, action) => {
+  const mk = (label, cls, action, sub) => {
     const b = document.createElement('button');
-    b.className = 'btn ' + cls;
+    b.className = 'btn ' + cls + (sub ? ' btn-sub' : '');
     b.textContent = label;
     b.onclick = () => doPunch(token, action, label);
     area.appendChild(b);
   };
 
   switch (st.state) {
-    case '未出勤':   mk('出勤する', 'btn-checkin', 'checkin'); break;
-    case '出勤済み': mk('時間外勤務 開始', 'btn-otstart', 'otstart'); break;
-    case '時間外中': mk('時間外勤務 終了', 'btn-otend', 'otend'); break;
-    default:         done.style.display = 'block';
+    case '未出勤':
+      mk('出勤する', 'btn-checkin', 'checkin');
+      break;
+    case '出勤済み':
+      mk('退勤する', 'btn-checkout', 'checkout');
+      mk('時間外勤務 開始', 'btn-otstart', 'otstart', true);
+      break;
+    case '時間外中':
+      mk('時間外勤務 終了', 'btn-otend', 'otend');
+      break;
+    default:
+      done.style.display = 'block';
   }
 }
 
@@ -278,9 +275,9 @@ async function doPunch(token, action, label) {
       else goIdle();
       return;
     }
-    document.getElementById('resultIcon').textContent = '✅';
+    document.getElementById('resultIcon').textContent = (action === 'checkout') ? '👋' : '✅';
     document.getElementById('resultText').textContent = res.name + ' さん ' + label;
-    document.getElementById('resultSub').textContent = '記録しました';
+    document.getElementById('resultSub').textContent = (action === 'checkout') ? 'おつかれさまでした' : '記録しました';
     show('screenResult');
     armReset(3500);
   } catch (err) {
