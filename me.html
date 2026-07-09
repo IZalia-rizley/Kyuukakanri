@@ -100,6 +100,15 @@
     .td-checkout:disabled{opacity:.45}
     .td-note{font-size:12px;color:var(--ink-sub);margin-top:8px;line-height:1.5}
 
+    /* 最近の記録 (Recent) */
+    .hist-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;
+      padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink-sub)}
+    .hist-row:last-child{border-bottom:none}
+    .hist-date{font-weight:700;color:var(--ink);min-width:64px}
+    .hist-main b{color:var(--ink);font-weight:600}
+    .hist-ot{font-size:12px;background:rgba(255,255,255,0.10);border:1px solid var(--line);
+      border-radius:999px;padding:2px 9px}
+
     /* マイQR */
     .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:2px}
     #qrbox{background:#fff;padding:12px;border-radius:14px;border:1px solid var(--line)}
@@ -168,6 +177,18 @@
               '<span class="ar">\u203A</span>' +
             '</div>' +
             '<div class="acc-body"><div class="acc-inner" id="td-inner">' +
+              '<div class="st-load">読み込み中…</div>' +
+            '</div></div>' +
+          '</div>' +
+
+          '<p class="eyebrow">Recent</p>' +
+          '<div class="acc" id="acc-hist">' +
+            '<div class="acc-head" onclick="toggle(this); maybeLoadHistory();">' +
+              '<span class="ic">\u{1F4C5}</span><span class="tt">最近の記録</span>' +
+              '<button class="re" onclick="event.stopPropagation(); loadHistory();">\u21BB</button>' +
+              '<span class="ar">\u203A</span>' +
+            '</div>' +
+            '<div class="acc-body"><div class="acc-inner" id="hist-inner">' +
               '<div class="st-load">読み込み中…</div>' +
             '</div></div>' +
           '</div>' +
@@ -287,6 +308,58 @@
         alert(res && res.error ? res.error : '退勤の記録に失敗しました。');
       }
       loadToday();
+    }
+
+    /* ===== 最近の記録 (Recent) ===== */
+
+    var HIST_DAYS = 7;
+    var _histLoaded = false;
+
+    function maybeLoadHistory(){
+      var acc = document.getElementById('acc-hist');
+      if(acc && acc.classList.contains('open') && !_histLoaded) loadHistory();
+    }
+
+    function loadHistory(){
+      _histLoaded = true;
+      var box = document.getElementById('hist-inner');
+      if(box) box.innerHTML = '<div class="st-load">読み込み中…</div>';
+      var s = document.createElement('script');
+      s.src = ATTEND_GAS + '?mode=history&days=' + HIST_DAYS + '&token=' + encodeURIComponent(token) + '&callback=historyCallback';
+      s.onerror = function(){
+        var b = document.getElementById('hist-inner');
+        if(b) b.innerHTML = '<div class="st-empty">通信に失敗しました。</div>';
+      };
+      document.body.appendChild(s);
+    }
+
+    var WD = ['日','月','火','水','木','金','土'];
+    function fmtHistDate(ymd){
+      var m = String(ymd).split('-');
+      if(m.length !== 3) return esc(ymd);
+      var dt = new Date(+m[0], +m[1]-1, +m[2]);
+      return (+m[1]) + '/' + (+m[2]) + ' (' + WD[dt.getDay()] + ')';
+    }
+
+    function historyCallback(d){
+      var box = document.getElementById('hist-inner');
+      if(!box) return;
+      if(!d || !d.ok){ box.innerHTML = '<div class="st-empty">読み込みに失敗しました。</div>'; return; }
+      if(!d.rows || !d.rows.length){
+        box.innerHTML = '<div class="st-empty">直近'+HIST_DAYS+'日間の記録はありません。</div>';
+        return;
+      }
+      var html = '';
+      d.rows.forEach(function(r){
+        html += '<div class="hist-row">' +
+          '<span class="hist-date">'+fmtHistDate(r.date)+'</span>' +
+          '<span class="hist-main">出勤 <b>'+esc(r.checkin || '--')+'</b>' +
+            (r.checkout ? ' → 退勤 <b>'+esc(r.checkout)+'</b>' : '') +
+          '</span>' +
+          (r.otStart ? '<span class="hist-ot">時間外 '+esc(r.otStart)+'〜'+esc(r.otEnd || '')+'</span>' : '') +
+        '</div>';
+      });
+      box.innerHTML = html;
     }
 
     /* ===== 申請状況 (My Status) ===== */
